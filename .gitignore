@@ -1,0 +1,8 @@
+dist/
+*.sig
+*.tmp
+.DS_Store
+__pycache__/
+tweaks/*/tweak.local.env
+CONTEXT.local.md
+opencmu-dump/

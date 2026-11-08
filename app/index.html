@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenCMU</title>
+  <link rel="stylesheet" href="css/opencmu.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <p class="eyebrow">Mazda MZD Connect</p>
+      <h1>OpenCMU</h1>
+      <p class="lede">Reversible tweaks, visible state.</p>
+    </header>
+
+    <section class="status" aria-live="polite">
+      <article class="card">
+        <span class="label">Payload</span>
+        <strong id="project">—</strong>
+        <span id="version" class="sub">—</span>
+      </article>
+      <article class="card">
+        <span class="label">Firmware</span>
+        <strong id="firmware">—</strong>
+        <span class="sub">JCI_SW_VER</span>
+      </article>
+      <article class="card">
+        <span class="label">Installed</span>
+        <strong id="installed">—</strong>
+        <span class="sub" id="installed-time">—</span>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Active tweaks</h2>
+      <ul id="tweaks" class="tweaks">
+        <li class="muted">Loading state…</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>Backup</h2>
+      <p id="backup" class="mono">—</p>
+      <p class="hint">Keep this directory. It is the rollback source for the last install.</p>
+    </section>
+
+    <footer class="foot">
+      <span>OpenCMU is independent and unaffiliated with Mazda.</span>
+      <button id="refresh" type="button">Refresh</button>
+    </footer>
+  </main>
+
+  <noscript><p class="noscript">This dashboard needs JavaScript enabled.</p></noscript>
+  <script src="js/opencmu.js"></script>
+</body>
+</html>

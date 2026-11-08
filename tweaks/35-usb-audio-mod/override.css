@@ -1,0 +1,15 @@
+/* opencmu:usb-audio-mod
+ * Larger transport icons and a visible focus ring on the USB audio screen.
+ */
+.Ump3CtrlButtonIcon {
+    background-size: 72px 72px !important;
+}
+
+.Ump3Ctrl5Button_focused,
+.Ump3Ctrl6Button_focused,
+.Ump3Ctrl7Button_focused,
+.Ump3Ctrl8Button_focused,
+.Ump3Ctrl9Button_focused {
+    outline: 2px solid #ffffff;
+    outline-offset: -8px;
+}

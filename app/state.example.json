@@ -1,0 +1,8 @@
+{
+  "project": "OpenCMU",
+  "version": "0.1.0",
+  "installed_at": "2026-01-01T00:00:00Z",
+  "firmware": "74.00.324",
+  "tweaks": ["00-example"],
+  "backup_dir": "/data/opencmu/backups/20260101-000000-1"
+}

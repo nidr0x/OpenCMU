@@ -1,0 +1,18 @@
+/* opencmu:bigger-album-art
+ * Enlarge the artwork square and keep its border in step with it.
+ */
+.NowPlaying4CtrlArtworkImageDiv {
+    width: 230px !important;
+    height: 230px !important;
+    top: 72px !important;
+    left: 526px !important;
+}
+
+.NowPlaying4CtrlArtworkImage,
+.NowPlaying4CtrlArtworkImageBorder {
+    width: 230px !important;
+    height: 230px !important;
+    max-width: 230px !important;
+    max-height: 230px !important;
+    background-size: 230px 230px !important;
+}

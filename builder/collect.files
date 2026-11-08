@@ -1,0 +1,45 @@
+# OpenCMU stock collector whitelist.
+# One absolute path or shell glob per line. Blank lines and # comments ignored.
+# Keep this list small: it is copied to the USB and sent back for analysis.
+
+# Identity and firmware
+/jci/version.ini
+
+# Shell sources
+/jci/gui/apps/system/js/systemApp.js
+/jci/gui/apps/system/controls/MainMenu/js/MainMenuCtrl.js
+/jci/gui/framework/js/Websockets.js
+/jci/gui/common/controls/List2/js/List2Ctrl.js
+/jci/gui/common/js/Common.js
+/jci/gui/common/controls/NowPlaying4/js/NowPlaying4Ctrl.js
+/jci/gui/common/controls/NowPlaying4/css/NowPlaying4Ctrl.css
+/jci/gui/common/controls/Ump3/css/Ump3Ctrl.css
+/jci/gui/apps/usbaudio/js/usbaudioApp.js
+/jci/gui/apps/btaudio/js/btaudioApp.js
+/jci/gui/apps/carplay/js/carplayApp.js
+/jci/gui/resources/js/backupparking/backupparkingAppDict_*.js
+/jci/opera/opera_dir/userjs/fps.js
+
+# Configuration
+/jci/opera/opera_home/opera.ini
+/jci/opera/opera_home/opera.ini.org
+/jci/vim/JCI_KEY_CONFIG.xml
+/jci/sm/sm.conf
+/jci/sm/sm_WCP.conf
+/jci/nms/ap_profiles.xml
+/etc/dlt.conf
+/etc/devmgr_config_master.xml
+/etc/aap_system_attributes.xml
+/etc/aap_system_attributes_UCP.xml
+/etc/wpa_supplicant.conf
+
+# Firewall and speed restriction scripts
+/jci/scripts/jci-fw.sh
+/jci/scripts/jci-fw-wcp.rules
+/jci/scripts/set_speed_restriction_config.sh
+/jci/scripts/set_lvds_speed_restriction_config.sh
+/jci/scripts/start_wifi.sh
+/jci/scripts/jci-wifiap.sh
+
+# Boot stages (who starts splashplayer, the collector, and the Aha waiters)
+/jci/scripts/stage_*.sh
