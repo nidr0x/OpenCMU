@@ -409,11 +409,20 @@ Several tweaks need an input the project cannot ship, and refuse to run
 without it:
 
 ```sh
+# 56-disable-offboard
+#   OPENCMU_OFFBOARD_SERVICE: a service name from /jci/sm/sm.conf;
+#   stock 74.00.324 carries offboard_service (/jci/offboard/obs_svc).
+OPENCMU_OFFBOARD_SERVICE=offboard_service \
+  sh install.sh --apply --experimental --tweaks 56-disable-offboard
+
 # 57-firewall-iptables-restore
 #   OPENCMU_WCP_RULES: an iptables-save ruleset for the WCP interface
 #   OPENCMU_FW_ANCHOR: the exact opening line of the firewall function in
-#   /jci/scripts/jci-fw.sh, for example "firewall_start() {"
-OPENCMU_WCP_RULES=./wcp.rules OPENCMU_FW_ANCHOR='firewall_start() {' \
+#   /jci/scripts/jci-fw.sh. Stock 74.00.324 has no firewall_start(); its WCP
+#   rules are built inline by do_start() and wcpset(), and wcpset() is the
+#   verified anchor. The ruleset can be transcribed from the $IPTABLES lines
+#   in those two functions into iptables-save format.
+OPENCMU_WCP_RULES=./wcp.rules OPENCMU_FW_ANCHOR='wcpset()' \
   sh install.sh --apply --experimental --tweaks 57-firewall-iptables-restore
 
 # 58-install-aatouch

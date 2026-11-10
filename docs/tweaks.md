@@ -114,7 +114,10 @@ the environment and abort when it is absent:
 - `57-firewall-iptables-restore` takes `OPENCMU_WCP_RULES` and
   `OPENCMU_FW_ANCHOR`. The anchor is the line that opens the firewall function
   in the stock `jci-fw.sh`; guessing it would mean guessing where a `return`
-  lands at boot.
+  lands at boot. On stock 74.00.324 the verified anchor is `wcpset()`: the
+  firmware ships no `firewall_start()`, and the WCP chain is built inline by
+  `do_start()` and `wcpset()`. A ruleset in iptables-save format can be
+  transcribed from the `$IPTABLES` lines of those two functions.
 - `58-install-aatouch` takes `OPENCMU_AATOUCH_SHIM` and
   `OPENCMU_AATOUCH_SHA256`. The shim is AGPL-3.0 third-party code, so the repo
   ships no copy and the digest pins exactly the file the user supplied.
