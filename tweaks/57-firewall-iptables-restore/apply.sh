@@ -17,15 +17,18 @@ rules="$OPENCMU_ROOT/jci/scripts/jci-fw-wcp.rules"
 grep -q '^\*filter' "$OPENCMU_WCP_RULES" || die "ruleset has no *filter table: $OPENCMU_WCP_RULES"
 grep -q '^COMMIT' "$OPENCMU_WCP_RULES" || die "ruleset has no COMMIT: $OPENCMU_WCP_RULES"
 
-# Parse the ruleset with the unit's own parser when it supports --test. This
-# only validates; it does not install anything.
-if [ -x /usr/sbin/iptables-restore ] &&
+# Parse the ruleset with the unit's own parser when it supports --test and the
+# caller is root (iptables-restore --test needs CAP_NET_ADMIN even without
+# rule application, so a non-root caller cannot use it). This only validates;
+# it does not install anything.
+if [ "$(id -u)" = 0 ] &&
+   [ -x /usr/sbin/iptables-restore ] &&
    /usr/sbin/iptables-restore --help 2>&1 | grep -q -- '--test'; then
   /usr/sbin/iptables-restore --test < "$OPENCMU_WCP_RULES" ||
     die "ruleset rejected by iptables-restore --test"
   log "ruleset validated with iptables-restore --test"
 else
-  log "iptables-restore --test not available; skipping parse check"
+  log "iptables-restore --test not available to this user; skipping parse check"
 fi
 
 record_created "$rules"
