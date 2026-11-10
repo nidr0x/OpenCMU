@@ -29,6 +29,10 @@ check_firmware() {
   ver=$(awk -F= '/^[[:space:]]*JCI_SW_VER[[:space:]]*=/ {
     v = $2
     gsub(/[[:space:]"]/, "", v)
+    # Stock 74.00.324 ships JCI_SW_VER="MAZ_CMU-150_74.00.324". Versions are
+    # compared on the numeric part only: drop everything up to the last "_",
+    # which leaves bare versions such as 74.00.324 untouched.
+    sub(/^.*_/, "", v)
     print v
     exit
   }' "$vi")

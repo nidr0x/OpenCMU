@@ -3,8 +3,10 @@
  * Wrap of the stock list builder: the stock function runs first, then the
  * preferred sources described below are moved to the front, in this order,
  * while the remaining entries keep their stock relative order. The stock
- * source IDs are USB_A, USB_B, BTAudio, FMRadio, AMRadio and AuxIn. The
- * wrapper never selects a source; it only orders the visible list.
+ * source IDs verified in the 74.00.324 master list: FMRadio, AMRadio, DAB,
+ * SatRadio, XmAudio, AhaRadio, Pandora, Stitcher, BTAudio, CarPlayWifi,
+ * CarPlay, AndroidAuto, USB_A, USB_B, CD, AuxIn, DVD, TV and TrafficInfo.
+ * The wrapper never selects a source; it only orders the visible list.
  */
 (function () {
     if (typeof systemApp === "undefined" || !systemApp.prototype) {

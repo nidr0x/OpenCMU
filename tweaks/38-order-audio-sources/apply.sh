@@ -9,12 +9,15 @@ case "$order" in
   *[!A-Za-z0-9_,]*) die "order may contain only source IDs separated by commas" ;;
 esac
 
-# The IDs are the stock entertainment source IDs; anything else is a typo.
+# The IDs are the stock entertainment source IDs taken from the 74.00.324
+# master list (systemApp.js, _initEntertainmentDataList). Anything else is a
+# typo. TrafficInfo is the traffic-alert item, not an audio source, but it is
+# part of the same visible list so ordering it is allowed.
 _seen=","
 for _id in $(printf '%s' "$order" | tr ',' ' '); do
   case $_id in
-    USB_A|USB_B|BTAudio|FMRadio|AMRadio|AuxIn) ;;
-    *) die "unknown audio source ID: $_id (stock IDs: USB_A, USB_B, BTAudio, FMRadio, AMRadio, AuxIn)" ;;
+    USB_A|USB_B|BTAudio|FMRadio|AMRadio|AuxIn|TrafficInfo|DAB|SatRadio|XmAudio|AhaRadio|Pandora|Stitcher|CarPlay|CarPlayWifi|AndroidAuto|CD|DVD|TV) ;;
+    *) die "unknown audio source ID: $_id (stock IDs: USB_A, USB_B, BTAudio, FMRadio, AMRadio, AuxIn, TrafficInfo, DAB, SatRadio, XmAudio, AhaRadio, Pandora, Stitcher, CarPlay, CarPlayWifi, AndroidAuto, CD, DVD, TV)" ;;
   esac
   case ,"$_seen" in
     *",$_id,"*) die "source ID repeated: $_id" ;;
