@@ -24,4 +24,5 @@ jobs:
         run: |
           make dist
           sh builder/verify-usb.sh dist/opencmu-usb
-          [ "$(sh installer/install.sh --usb . --root /nonexistent --list | grep -c .)" -eq 50 ]
+          # The tweak count is not hardcoded: it is the number of tweaks in the tree.
+          [ "$(sh installer/install.sh --usb . --root /nonexistent --list | grep -c .)" = "$(find tweaks -name tweak.env | wc -l | tr -d ' ')" ]
