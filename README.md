@@ -341,14 +341,14 @@ Bundled tweaks:
 | `33-no-gracenote-text` | low | no | Drops the Gracenote label on the now-playing screen. |
 | `34-bigger-album-art` | low | no | Enlarges the now-playing artwork. |
 | `35-usb-audio-mod` | low | no | Larger USB audio transport buttons with a focus ring. |
-| `36-opera-cache-increase` | low | no | Raises the Opera figure and document caches. |
+| `36-opera-cache-increase` | low | no | Enables the Opera disk cache and raises it from 2000 KB to 8000 KB. |
 | `37-mute-pause` | low | no | Remaps the steering-wheel mute button to play/pause. |
-| `38-order-audio-sources` | medium | yes | Rebuilds the entertainment source list with the preferred sources first; set `OPENCMU_AUDIO_ORDER` to a comma-separated list of the stock source IDs (USB_A, USB_B, BTAudio, FMRadio, AMRadio, AuxIn). Reorders the list only; it never selects a source. |
+| `38-order-audio-sources` | medium | yes | Rebuilds the entertainment source list with the preferred sources first; set `OPENCMU_AUDIO_ORDER` to a comma-separated list of stock source IDs (see `docs/tweaks.md` for the full 74.00.324 list). Reorders the list only; it never selects a source. |
 | `40-menu-loop` | low | no | Makes the home menu wrap at both edges. |
 | `41-list-loop` | low | no | Makes long lists wrap at both ends. |
 | `42-no-beeps` | low | no | Silences the interface beep. |
 | `43-touch-while-driving` | high | no | Keeps the touchscreen usable while moving. |
-| `44-track-notification` | low | no | Shows artist and title in track notifications. |
+| `44-track-notification` | low | no | Shows artist and title in USB audio track notifications. |
 | `45-carplay-autoforeground` | medium | no | Raises CarPlay as soon as a phone session starts. |
 | `46-disable-siriusxm` | high | no | Switches off the SiriusXM services. |
 | `47-disable-pandora` | high | no | Switches off the Pandora service; leaves the shared streaming server to 49. |
@@ -382,6 +382,7 @@ Bundled tweaks:
 | `75-enable-ssh` | medium | no | Installs a key-only SSH config and starts sshd. Needs `OPENCMU_SSH_PUBKEY`. |
 | `76-enable-wifi-client` | high | no | Switches Wi-Fi to client mode at boot. Needs an SSID and passphrase and `60-startup-hook`. |
 | `77-boot-profiler` | low | no | Read-only runtime that logs when boot milestones are reached (HMI process, wlan0, hostapd, ready flag, CarPlay session). Needs `60-startup-hook`. |
+| `78-select-bt-audio-first` | medium | no | Switches to Bluetooth audio once per boot when a device connects. |
 | `90-replacement-template` | high | no | Generic template for replacing a user-supplied file. Ships no patch. |
 | `91-touch-replacement` | high | no | Touch-lock template. Ships no patch. |
 
@@ -610,6 +611,7 @@ opencmu/
 │   ├── 75-enable-ssh/
 │   ├── 76-enable-wifi-client/
 │   ├── 77-boot-profiler/
+│   ├── 78-select-bt-audio-first/
 │   ├── 90-replacement-template/
 │   └── 91-touch-replacement/
 ├── manifest.env

@@ -128,10 +128,14 @@ the environment and abort when it is absent:
   format. It refuses ed25519 because the unit ships OpenSSH 5.9, and it does
   not change firewall rules.
 - `38-order-audio-sources` takes `OPENCMU_AUDIO_ORDER`, a comma-separated list
-  of the stock source IDs (`USB_A`, `USB_B`, `BTAudio`, `FMRadio`, `AMRadio`,
-  `AuxIn`). It appends a guarded wrapper to `systemApp.js` that reorders the
-  entertainment source list and leaves the entry selection untouched; each
-  listed ID must match a stock ID and IDs cannot repeat.
+  of stock source IDs. It appends a guarded wrapper to `systemApp.js` that
+  reorders the entertainment source list and leaves the entry selection
+  untouched; each listed ID must match a stock ID and IDs cannot repeat. Stock
+  74.00.324 IDs: `TrafficInfo`, `FMRadio`, `AMRadio`, `DAB`, `SatRadio`,
+  `XmAudio`, `AhaRadio`, `Pandora`, `Stitcher`, `BTAudio`, `CarPlayWifi`,
+  `CarPlay`, `AndroidAuto`, `USB_A`, `USB_B`, `CD`, `AuxIn`, `DVD` and `TV`.
+  `TrafficInfo` is the traffic-alert item, not an audio source, but it lives in
+  the same list.
 - `76-enable-wifi-client` takes `OPENCMU_WIFI_SSID` and `OPENCMU_WIFI_PSK`.
   The optional `OPENCMU_WIFI_STATIC_IP`, `OPENCMU_WIFI_NETMASK` and
   `OPENCMU_WIFI_GATEWAY` replace DHCP.
