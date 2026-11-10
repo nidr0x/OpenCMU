@@ -1,6 +1,6 @@
 /* opencmu:no-disclaimer
- * Acknowledge the disclaimer without a tap. Called from the Disclaimer
- * template's readyFunction, so it runs once the template is on screen.
+ * Acknowledge the disclaimer without a tap. Called as the Disclaimer
+ * template's displayedFunction, so it runs when the template is shown.
  */
 systemApp.prototype._noMoreDisclaimer = function () {
     framework.sendEventToMmui("system", "DisposeIntroVideo");
