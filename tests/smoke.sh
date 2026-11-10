@@ -141,6 +141,15 @@ fi
 printf '[Info]\nJCI_SW_VER=74.00.324\n' > "$FAKE/jci/version.ini"
 pass "firmware guard rejects versions outside the range"
 
+# 5b. The real 74.00.324 version.ini carries a build prefix and quotes:
+# JCI_SW_VER="MAZ_CMU-150_74.00.324". Only the numeric part may be compared.
+printf '[VersionInfo]\nJCI_SW_VER="MAZ_CMU-150_74.00.324"\n' > "$FAKE/jci/version.ini"
+out=$(run)
+printf '%s\n' "$out" | grep -q 'firmware: 74.00.324' ||
+  fail "stock version format was not normalized to its numeric part"
+printf '[Info]\nJCI_SW_VER=74.00.324\n' > "$FAKE/jci/version.ini"
+pass "stock version format is normalized"
+
 # 6. Missing version.ini is fatal unless --force is passed.
 mv "$FAKE/jci/version.ini" "$FAKE/jci/version.ini.bak"
 if run --apply >/dev/null 2>&1; then
@@ -311,7 +320,7 @@ systemApp.prototype.buildTemplates = function () {
     return {
         "Disclaimer" : {
             "template" : "NoCtrlTmplt",
-            "readyFunction" : this._displayedDisclaimer.bind(this),
+            "displayedFunction" : this._displayedDisclaimer.bind(this),
         },
     };
 };
@@ -337,19 +346,20 @@ var dict = {
 };
 EOF
 
-cat > "$FAKE7/jci/gui/common/controls/NowPlaying4/js/NowPlaying4Ctrl.js" <<'EOF'
-this._currentContextTemplate.nowPlaying4Ctrl.setDetailLine3({detailTextId: "Gracenote"});
-EOF
-
 printf '.NowPlaying4CtrlArtworkImageDiv {\n  top: 10px;\n}\n' \
   > "$FAKE7/jci/gui/common/controls/NowPlaying4/css/NowPlaying4Ctrl.css"
+printf 'var NowPlaying4Ctrl = function () {};\n' \
+  > "$FAKE7/jci/gui/common/controls/NowPlaying4/js/NowPlaying4Ctrl.js"
 printf '.Ump3CtrlButtonIcon {\n  background-size: 32px 32px;\n}\n' \
   > "$FAKE7/jci/gui/common/controls/Ump3/css/Ump3Ctrl.css"
 
 cat > "$FAKE7/jci/opera/opera_home/opera.ini" <<'EOF'
-[Cache]
-Figure Cache Size=8000
-Document Cache Size=1000
+Console Error Log Enabled=0
+
+[Disk Cache]
+Enabled=0
+Size=2000
+Multimedia Stream Size=4096
 EOF
 
 cat > "$FAKE7/jci/vim/JCI_KEY_CONFIG.xml" <<'EOF'
@@ -359,9 +369,18 @@ cat > "$FAKE7/jci/vim/JCI_KEY_CONFIG.xml" <<'EOF'
 EOF
 
 cat > "$FAKE7/jci/gui/apps/system/controls/MainMenu/js/MainMenuCtrl.js" <<'EOF'
-MainMenuCtrl.prototype._moveFocus = function (index) {
-    if (index < 0)index = 0;
-    if (index > 4)index = 4;
+MainMenuCtrl.prototype._offsetFocus = function (direction) {
+    var index = this._getFocus();
+    index += direction;
+
+    if (index < 0)
+    {
+        index = 0;
+    }
+    if (index > 4)
+    {
+        index = 4;
+    }
     this._focusedIndex = index;
 };
 EOF
@@ -391,6 +410,14 @@ var notification = {
 };
 EOF
 done
+
+# Shaped like stock usbaudioApp.js on 74.00.324: the "Powered by Gracenote"
+# detail line is set from three call sites inside the USB audio app.
+cat >> "$FAKE7/jci/gui/apps/usbaudio/js/usbaudioApp.js" <<'EOF'
+this._currentContextTemplate.nowPlaying4Ctrl.setDetailLine3({detailTextId: "Gracenote"});
+this._currentContextTemplate.nowPlaying4Ctrl.setDetailLine3({detailTextId: "Gracenote"});
+this._currentContextTemplate.nowPlaying4Ctrl.setDetailLine3({detailTextId: "Gracenote"});
+EOF
 
 cat > "$FAKE7/jci/gui/apps/carplay/js/carplayApp.js" <<'EOF'
 carplayApp.prototype._SendCPSessionStateMsgHandler = function (msg) {
@@ -469,25 +496,33 @@ grep -qF 'autoscrollTier1Timeout :                150,' "$FAKE7/jci/gui/common/c
 grep -qF 'autoscrollTier2Interval :               300,' "$FAKE7/jci/gui/common/controls/List2/js/List2Ctrl.js" ||
   fail "shorter-delay: tier2 interval not shortened"
 
-grep -qF 'setDetailLine3({detailTextId: ""});' "$FAKE7/jci/gui/common/controls/NowPlaying4/js/NowPlaying4Ctrl.js" ||
+grep -qF 'setDetailLine3({detailTextId: ""});' "$FAKE7/jci/gui/apps/usbaudio/js/usbaudioApp.js" ||
   fail "no-gracenote: detail line not cleared"
+[ "$(grep -cF 'setDetailLine3({detailTextId: ""});' "$FAKE7/jci/gui/apps/usbaudio/js/usbaudioApp.js")" = "3" ] ||
+  fail "no-gracenote: not all three call sites were cleared"
+[ "$(grep -cF 'detailTextId: "Gracenote"' "$FAKE7/jci/gui/apps/usbaudio/js/usbaudioApp.js")" = "0" ] ||
+  fail "no-gracenote: a Gracenote call site survived"
 
 [ "$(grep -cF 'opencmu:bigger-album-art' "$FAKE7/jci/gui/common/controls/NowPlaying4/css/NowPlaying4Ctrl.css")" = "1" ] ||
   fail "bigger-album-art: marker count wrong"
 [ "$(grep -cF 'opencmu:usb-audio-mod' "$FAKE7/jci/gui/common/controls/Ump3/css/Ump3Ctrl.css")" = "1" ] ||
   fail "usb-audio-mod: marker count wrong"
 
-grep -qF 'Figure Cache Size=16000' "$FAKE7/jci/opera/opera_home/opera.ini" ||
-  fail "opera-cache: figure cache not raised"
-grep -qF 'Document Cache Size=4000' "$FAKE7/jci/opera/opera_home/opera.ini" ||
-  fail "opera-cache: document cache not raised"
+grep -qF 'Enabled=1' "$FAKE7/jci/opera/opera_home/opera.ini" ||
+  fail "opera-cache: disk cache not enabled"
+grep -qF 'Size=8000' "$FAKE7/jci/opera/opera_home/opera.ini" ||
+  fail "opera-cache: disk cache size not raised"
+[ "$(grep -cF 'Enabled=0' "$FAKE7/jci/opera/opera_home/opera.ini")" = "1" ] ||
+  fail "opera-cache: the wrong Enabled= line was flipped"
 
 grep -qF 'codeSW1Button6="JCI_KEY_PLAYPAUSE"' "$FAKE7/jci/vim/JCI_KEY_CONFIG.xml" ||
   fail "mute-pause: binding not remapped"
 
 MENU="$FAKE7/jci/gui/apps/system/controls/MainMenu/js/MainMenuCtrl.js"
-grep -qF 'index = 4; // opencmu:menu-loop' "$MENU" || fail "menu-loop: left edge not wrapped"
-grep -qF 'index = 0; // opencmu:menu-loop' "$MENU" || fail "menu-loop: right edge not wrapped"
+grep -qF 'index = this._coins.length - 1; // opencmu:menu-loop' "$MENU" ||
+  fail "menu-loop: left edge not wrapped"
+grep -qF 'if (index > this._coins.length - 1) // opencmu:menu-loop' "$MENU" ||
+  fail "menu-loop: right edge not wrapped"
 
 COMMON="$FAKE7/jci/gui/common/js/Common.js"
 [ "$(grep -cF 'opencmu:list-loop' "$FAKE7/jci/gui/common/controls/List2/js/List2Ctrl.js")" = "1" ] ||
@@ -500,11 +535,11 @@ grep -qF 'Common.prototype.beep_stock = function(pressType, eventCause)' "$COMMO
 grep -qF '// opencmu:touch-while-driving' "$COMMON" ||
   fail "touch-while-driving: marker missing"
 
-for app in usbaudio btaudio; do
-  grep -qF 'text2 : ((msg.params.payload.artist && msg.params.payload.title)' \
-    "$FAKE7/jci/gui/apps/$app/js/${app}App.js" ||
-    fail "track-notification: $app payload not rewritten"
-done
+grep -qF 'text2 : ((msg.params.payload.artist && msg.params.payload.title)' \
+  "$FAKE7/jci/gui/apps/usbaudio/js/usbaudioApp.js" ||
+  fail "track-notification: usbaudio payload not rewritten"
+grep -qF 'text2 : msg.params.payload.title,' "$FAKE7/jci/gui/apps/btaudio/js/btaudioApp.js" ||
+  fail "track-notification: btaudio must stay stock"
 
 [ "$(grep -cF 'opencmu:carplay-autoforeground' "$FAKE7/jci/gui/apps/carplay/js/carplayApp.js")" = "1" ] ||
   fail "carplay-autoforeground: block not appended once"
@@ -523,8 +558,12 @@ grep -qF 'autoscrollTier1Timeout :                1500,' "$FAKE7/jci/gui/common/
   fail "rollback: list delay not restored"
 grep -qF '"BUC-SafetyText" : "Always check your surroundings."' "$FAKE7/jci/gui/resources/js/backupparking/backupparkingAppDict_NA.js" ||
   fail "rollback: reverse warning not restored"
-grep -qF 'Figure Cache Size=8000' "$FAKE7/jci/opera/opera_home/opera.ini" ||
-  fail "rollback: opera cache not restored"
+[ "$(grep -cF 'setDetailLine3({detailTextId: "Gracenote"});' "$FAKE7/jci/gui/apps/usbaudio/js/usbaudioApp.js")" = "3" ] ||
+  fail "rollback: gracenote call sites not restored"
+grep -qF 'Enabled=0' "$FAKE7/jci/opera/opera_home/opera.ini" ||
+  fail "rollback: opera disk cache not restored"
+grep -qF 'Size=2000' "$FAKE7/jci/opera/opera_home/opera.ini" ||
+  fail "rollback: opera disk cache size not restored"
 grep -qF 'codeSW1Button6="JCI_KEY_MUTE"' "$FAKE7/jci/vim/JCI_KEY_CONFIG.xml" ||
   fail "rollback: key binding not restored"
 [ "$(grep -cF 'opencmu:bigger-album-art' "$FAKE7/jci/gui/common/controls/NowPlaying4/css/NowPlaying4Ctrl.css" || true)" = "0" ] ||
@@ -957,6 +996,10 @@ cat > "$FAKE13/jci/gui/apps/system/js/systemApp.js" <<'EOF'
 systemApp.prototype._buildEntertainmentDataList = function () {
     return { items: [], itemCount: 0 };
 };
+
+systemApp.prototype._StatusMenuBTAudioMsgHandler = function (msg) {
+    this._lastBtPayload = msg && msg.params && msg.params.payload;
+};
 EOF
 
 cat > "$FAKE13/etc/ssh/sshd_config" <<'EOF'
@@ -1018,7 +1061,7 @@ run13() {
   sh "$PAYLOAD/install.sh" --usb "$PAYLOAD" --root "$FAKE13" "$@"
 }
 
-PLAN13="38-order-audio-sources 47-disable-pandora 48-disable-stitcher 54-wifi-boot-off-busy-core 60-startup-hook 62-disable-touchscreen 63-no-blank-art 64-disable-jcicd 65-disable-dvd 66-disable-tv 67-disable-dab 68-disable-voice 69-disable-traffic 70-disable-diagnostics 71-disable-telematics 72-disable-nav 73-disable-jvmm 74-earlier-wifi-init 75-enable-ssh 76-enable-wifi-client 77-boot-profiler"
+PLAN13="38-order-audio-sources 47-disable-pandora 48-disable-stitcher 54-wifi-boot-off-busy-core 60-startup-hook 62-disable-touchscreen 63-no-blank-art 64-disable-jcicd 65-disable-dvd 66-disable-tv 67-disable-dab 68-disable-voice 69-disable-traffic 70-disable-diagnostics 71-disable-telematics 72-disable-nav 73-disable-jvmm 74-earlier-wifi-init 75-enable-ssh 76-enable-wifi-client 77-boot-profiler 78-select-bt-audio-first"
 run13 --apply --experimental --tweaks "$PLAN13" >/dev/null
 
 SM13="$FAKE13/jci/sm/sm.conf"
@@ -1060,8 +1103,58 @@ grep -A1 'this.properties.artworkImagePath = imagePath;' "$NP13" | grep -qF 'Now
 grep -qF 'preferredAudioSourceIds = "BTAudio,USB_A"' "$SY13" ||
   fail "order-audio-sources: requested order not installed"
 grep -qF 'opencmuAudioOrderWrapped' "$SY13" || fail "order-audio-sources: guard missing"
+
+[ "$(grep -cF 'opencmu:select-bt-audio-first' "$SY13")" = "1" ] ||
+  fail "select-bt-audio-first: marker count wrong"
+grep -qF 'systemApp.prototype._StatusMenuBTAudioMsgHandler = wrapped;' "$SY13" ||
+  fail "select-bt-audio-first: handler not wrapped"
+grep -qF 'opencmuBtAudioFirstWrapped' "$SY13" ||
+  fail "select-bt-audio-first: guard missing"
 if command -v node >/dev/null 2>&1; then
-  node --check "$SY13" || fail "order-audio-sources: appended JS does not parse"
+  node --check "$SY13" || fail "systemApp.js appended JS does not parse"
+
+  # Behavior: an Available message with a device name must result in exactly
+  # one SelectBTAudio, later Available messages must not repeat it, and an
+  # Available message without a device name must not select at all.
+  TMP78="$TMP/bt78"
+  mkdir -p "$TMP78"
+  cat > "$TMP78/harness.js" <<'EOF'
+function systemApp() { this.uiaId = "system"; }
+systemApp.prototype._buildEntertainmentDataList = function () {
+    return { items: [], itemCount: 0 };
+};
+systemApp.prototype._StatusMenuBTAudioMsgHandler = function (msg) {
+    this._lastBtPayload = msg && msg.params && msg.params.payload;
+};
+var events = [];
+var framework = { sendEventToMmui: function (uiaId, event) { events.push(uiaId + ":" + event); } };
+var log = { debug: function () {} };
+EOF
+  cat "$SY13" >> "$TMP78/harness.js"
+  cat >> "$TMP78/harness.js" <<'EOF'
+var app = new systemApp();
+var available = { params: { payload: { appStatus: "Available", deviceName: "Phone" } } };
+app._StatusMenuBTAudioMsgHandler(available);
+app._StatusMenuBTAudioMsgHandler(available);
+app._StatusMenuBTAudioMsgHandler({ params: { payload: { appStatus: "Available", deviceName: "Phone" } } });
+app._StatusMenuBTAudioMsgHandler({ params: { payload: { appStatus: "Available" } } });
+app._StatusMenuBTAudioMsgHandler({ params: { payload: { appStatus: "Unavailable", deviceName: "Phone" } } });
+var selected = events.filter(function (e) { return e === "system:SelectBTAudio"; });
+if (selected.length !== 1) {
+    console.error("SelectBTAudio fired " + selected.length + " times, expected 1");
+    process.exit(1);
+}
+if (events.length !== 1) {
+    console.error("extra events sent: " + events.join(","));
+    process.exit(1);
+}
+if (app._lastBtPayload.deviceName !== "Phone") {
+    console.error("stock handler did not run");
+    process.exit(1);
+}
+EOF
+  node "$TMP78/harness.js" || fail "select-bt-audio-first: behavior test failed"
+  rm -rf "$TMP78"
 fi
 
 if [ ! -x "$TOUCH13" ] || ! sh -n "$TOUCH13"; then
@@ -1132,6 +1225,8 @@ run13 --apply --rollback >/dev/null
 [ "$(grep -cF 'opencmu:no-blank-art' "$NP13" || true)" = "0" ] || fail "rollback: artwork patch left behind"
 [ "$(grep -cF 'opencmu:order-audio-sources' "$SY13" || true)" = "0" ] ||
   fail "rollback: audio order left behind"
+[ "$(grep -cF 'opencmu:select-bt-audio-first' "$SY13" || true)" = "0" ] ||
+  fail "rollback: select-bt-audio-first left behind"
 grep -qF 'PasswordAuthentication yes' "$SSH13" || fail "rollback: sshd_config not restored"
 [ ! -e "$KEYS13" ] || fail "rollback: authorized key left behind"
 [ ! -e "$WCONF13" ] || fail "rollback: wifi config left behind"
@@ -1201,6 +1296,8 @@ run13 --apply --experimental --tweaks "$PLAN13" >/dev/null
 [ "$(grep -cF 'opencmu:enable-ssh' "$SSH13")" = "1" ] || fail "enable-ssh duplicated"
 [ "$(grep -cF 'opencmu:order-audio-sources' "$SY13")" = "1" ] ||
   fail "order-audio-sources duplicated on re-apply"
+[ "$(grep -cF 'opencmu:select-bt-audio-first' "$SY13")" = "1" ] ||
+  fail "select-bt-audio-first duplicated on re-apply"
 [ "$(wc -l < "$KEYS13" | tr -d ' ')" = "1" ] || fail "enable-ssh: key file grew"
 pass "ScreenTune-parity batch is idempotent"
 
