@@ -580,6 +580,21 @@ grep -qF 'Common.prototype.beep = function(pressType, eventCause)' "$COMMON" ||
 [ "$(grep -cF 'value="blm_ira_aha"' "$SM" || true)" = "3" ] || fail "rollback: stage waits not restored"
 pass "firmware text patches roll back"
 
+# 14b2. A single-tweak rollback must also restore its file byte for byte.
+# A batch rollback cannot prove this: when two tweaks patch the same file, the
+# other tweak's rollback can mask a tweak that rolls back the wrong file.
+run7 --apply --experimental --tweaks 33-no-gracenote-text >/dev/null
+grep -qF 'setDetailLine3({detailTextId: ""});' "$FAKE7/jci/gui/apps/usbaudio/js/usbaudioApp.js" ||
+  fail "single-tweak rollback setup: gracenote not patched"
+run7 --apply --rollback >/dev/null
+[ "$(grep -cF 'setDetailLine3({detailTextId: "Gracenote"});' "$FAKE7/jci/gui/apps/usbaudio/js/usbaudioApp.js")" = "3" ] ||
+  fail "single-tweak rollback: gracenote call sites not restored"
+run7 --apply --experimental --tweaks 44-track-notification >/dev/null
+run7 --apply --rollback >/dev/null
+grep -qF 'text2 : msg.params.payload.title,' "$FAKE7/jci/gui/apps/usbaudio/js/usbaudioApp.js" ||
+  fail "single-tweak rollback: usbaudio payload not restored"
+pass "single-tweak rollbacks restore their own file"
+
 # 14c. Re-applying must not duplicate the appended blocks.
 run7 --apply --experimental --tweaks "34-bigger-album-art 35-usb-audio-mod 41-list-loop 42-no-beeps 45-carplay-autoforeground" >/dev/null
 rm -f "$FAKE7/data/opencmu/state/receipt.env" "$FAKE7/data/opencmu/state/receipt.json"
