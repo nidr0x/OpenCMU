@@ -448,7 +448,9 @@ and starts its scripts at boot. They write nothing when the directory is
 missing, and the installer itself never spawns the runtime.
 
 See [docs/tweaks.md](docs/tweaks.md) for the full authoring guide and helper
-reference.
+reference, and [docs/boot-profiling.md](docs/boot-profiling.md) for the
+procedure to profile a real boot with `77-boot-profiler` and turn the timeline
+into tweak choices.
 
 ## Dashboard
 
@@ -552,6 +554,8 @@ opencmu/
 │   └── collect.files       whitelist of stock paths
 ├── docs/
 │   ├── architecture.md
+│   ├── boot-profiling.md
+│   ├── collect.md
 │   ├── package-format.md
 │   ├── recovery.md
 │   ├── safety.md
