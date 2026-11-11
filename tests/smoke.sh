@@ -1170,16 +1170,35 @@ fi
 # expected milestone lines, then check that a second run under an active lock
 # exits without writing its own BOOT.
 PTMP="$TMP/prof"
-mkdir -p "$PTMP"
+mkdir -p "$PTMP/bin"
+printf '#!/bin/sh\ncat "%s/netstat.source" 2>/dev/null\n' "$PTMP" > "$PTMP/bin/netstat"
+chmod +x "$PTMP/bin/netstat"
+: > "$PTMP/netstat.source"
 printf '100.0 0\n' > "$PTMP/uptime"
 touch "$PTMP/wlan0" "$PTMP/ready"
+# An empty netstat must not produce a CARPLAY_UP event: the old probe pipeline
+# returned success whenever netstat had no ESTABLISHED lines.
 OPENCMU_PROFILER_LOG="$PTMP/prof.log" OPENCMU_PROFILER_UPTIME="$PTMP/uptime" \
 OPENCMU_PROFILER_WLAN="$PTMP/wlan0" OPENCMU_PROFILER_READY_FLAG="$PTMP/ready" \
 OPENCMU_PROFILER_WINDOW=2 OPENCMU_PROFILER_STEADY=0 OPENCMU_PROFILER_LOCK="$PTMP/lock" \
+PATH="$PTMP/bin:$PATH" \
   sh "$PROF13"
 for _line in BOOT EVENT WIFI_MODULES EVENT WIFI_READY STEADY SNAPSHOT WIFI_UP DONE; do
   grep -qF "$_line" "$PTMP/prof.log" || fail "boot-profiler: log missing '$_line'"
 done
+grep -qF 'EVENT CARPLAY_UP' "$PTMP/prof.log" &&
+  fail "boot-profiler: CARPLAY_UP fired without established connections"
+
+# A matching netstat line must fire CARPLAY_UP.
+printf 'tcp4 0 0 192.168.53.1:7000 192.168.53.20:52341 ESTABLISHED\n' > "$PTMP/netstat.source"
+: > "$PTMP/prof.log"
+OPENCMU_PROFILER_LOG="$PTMP/prof.log" OPENCMU_PROFILER_UPTIME="$PTMP/uptime" \
+OPENCMU_PROFILER_WLAN="$PTMP/wlan0" OPENCMU_PROFILER_READY_FLAG="$PTMP/ready" \
+OPENCMU_PROFILER_WINDOW=2 OPENCMU_PROFILER_STEADY=0 OPENCMU_PROFILER_LOCK="$PTMP/lock2" \
+PATH="$PTMP/bin:$PATH" \
+  sh "$PROF13"
+grep -qF 'EVENT CARPLAY_UP' "$PTMP/prof.log" ||
+  fail "boot-profiler: CARPLAY_UP did not fire on an established session"
 
 # A second run must refuse while the first holds the lock. The first run uses
 # an unreachable WLAN to guarantee it stays alive for the whole window.
