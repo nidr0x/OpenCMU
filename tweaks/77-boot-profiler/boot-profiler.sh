@@ -59,22 +59,29 @@ running() {
 
 # Any TCP line that carries one of the CarPlay ranges and one of its ports as
 # ESTABLISHED counts. The ranges and ports are stock facts: the phone joins
-# the unit over 192.168.53.0/24 or 192.168.100.0/24 and CarPlay lives on
-# 7000/7100.
+# the unit over 192.168.53.0/24 or 192.168.100.0/24 and the firewall accepts
+# port 7000 on wlan0 (jci-fw.sh wcp_packets). Port 7100 is community-reported
+# only. Wired CarPlay sessions do not use TCP and are not detected.
 carplay_up() {
     have netstat || return 2
-    netstat -tn 2>/dev/null | grep -F ESTABLISHED |
+    _ctf=${TMPDIR:-/tmp}/opencmu-carplay.$$
+    netstat -tn 2>/dev/null | grep -F ESTABLISHED > "$_ctf" 2>/dev/null
+    _found=0
+    if [ -s "$_ctf" ]; then
         while IFS= read -r _line; do
             for _h in $CARPLAY_HOSTS; do
                 case $_line in
                     *"$_h"*)
                         for _p in $CARPLAY_PORTS; do
-                            case $_line in *"$_p"*) exit 0 ;; esac
+                            case $_line in *"$_p"*) _found=1; break 3 ;; esac
                         done
                         ;;
                 esac
             done
-        done
+        done < "$_ctf"
+    fi
+    rm -f "$_ctf"
+    [ "$_found" = 1 ]
 }
 
 say() {
