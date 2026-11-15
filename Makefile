@@ -17,5 +17,14 @@ dist:
 collect:
 	sh builder/build-collect.sh
 
+# Opt-in static lint of every patch anchor against a stock rootfs.
+# Requires OPENCMU_STOCK_ROOT (exits 2 when unset); never fails CI without it.
+check-anchors:
+	@if [ -z "$$OPENCMU_STOCK_ROOT" ]; then \
+		echo "check-anchors: set OPENCMU_STOCK_ROOT to a stock rootfs" >&2; \
+		exit 2; \
+	fi
+	python3 builder/check-anchors.py
+
 clean:
 	rm -rf dist

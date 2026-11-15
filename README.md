@@ -237,6 +237,22 @@ example tweak, checks the receipt and backup, rolls it back, and exercises the
 firmware guard, the experimental gate, partial-failure recovery, and the
 builders.
 
+Two opt-in checks run against a stock rootfs — a pristine, unpacked copy of
+the 74.00.324 firmware tree on your disk, no `.up` file needed at test time:
+
+```sh
+OPENCMU_STOCK_ROOT=/path/to/rootfs make check-anchors
+OPENCMU_STOCK_ROOT=/path/to/rootfs sh tests/stock-sweep.sh
+```
+
+`check-anchors` statically parses every patch call in `tweaks/*/apply.sh` and
+counts the literals each helper will require, simulating the calls in order,
+so an anchor that depends on an earlier patch in the same apply still checks.
+`stock-sweep` applies each tweak for real against the copy, rolls it back, and
+verifies the rollback byte-for-byte plus a whole-tree manifest at the end.
+Tweaks whose external inputs are missing (the AGPL Android Auto shim, SSH
+keys, an iptables capture) are skipped, not failed.
+
 Verify the USB payload before copying it:
 
 ```sh
@@ -571,12 +587,15 @@ opencmu/
 ├── builder/
 │   ├── build-usb.sh        assemble dist/opencmu-usb
 │   ├── verify-usb.sh       check hashes and file list
+│   ├── check-anchors.py    static lint of every patch anchor against a stock rootfs
 │   ├── make-up.py          experimental .up builder
 │   ├── build-collect.sh    read-only stock collector payload
 │   ├── collect.sh          runs on the unit; copies the whitelist
 │   └── collect.files       whitelist of stock paths
 ├── docs/
 │   ├── architecture.md
+│   ├── boot-profiling.md
+│   ├── collect.md
 │   ├── package-format.md
 │   ├── recovery.md
 │   ├── safety.md
@@ -586,7 +605,8 @@ opencmu/
 │   ├── install.sh          main installer
 │   └── lib/                common, manifest, patch, tweaks
 ├── tests/
-│   └── smoke.sh            fake-root integration tests
+│   ├── smoke.sh            fake-root integration tests
+│   └── stock-sweep.sh      opt-in apply/rollback sweep against a stock rootfs
 ├── tweaks/
 │   ├── 00-example/
 │   ├── 30-no-disclaimer/

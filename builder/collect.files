@@ -32,6 +32,7 @@
 /etc/aap_system_attributes.xml
 /etc/aap_system_attributes_UCP.xml
 /etc/wpa_supplicant.conf
+/etc/ssh/sshd_config
 
 # Firewall and speed restriction scripts
 /jci/scripts/jci-fw.sh
@@ -40,6 +41,12 @@
 /jci/scripts/set_lvds_speed_restriction_config.sh
 /jci/scripts/start_wifi.sh
 /jci/scripts/jci-wifiap.sh
+
+# Framework and signal sources for deferred RE (BT SBN events, fallback FM,
+# source-list behaviour the 78 follow-up needs)
+/jci/gui/framework/js/GuiFramework.js
+/jci/gui/framework/js/BaseApp.js
+/jci/gui/apps/fmradio/js/fmradioApp.js
 
 # Boot stages (who starts splashplayer, the collector, and the Aha waiters)
 /jci/scripts/stage_*.sh
