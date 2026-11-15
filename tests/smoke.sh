@@ -6,6 +6,9 @@ set -eu
 
 ROOT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/opencmu-test.XXXXXX")
+# Canonicalize: a TMPDIR with a trailing slash yields a // path, and the
+# installer canonicalizes ROOT, so every later path comparison must match it.
+TMP=$(CDPATH='' cd -- "$TMP" && pwd)
 trap 'rm -rf "$TMP"' EXIT INT TERM
 
 FAKE="$TMP/root"
@@ -594,6 +597,34 @@ run7 --apply --rollback >/dev/null
 grep -qF 'text2 : msg.params.payload.title,' "$FAKE7/jci/gui/apps/usbaudio/js/usbaudioApp.js" ||
   fail "single-tweak rollback: usbaudio payload not restored"
 pass "single-tweak rollbacks restore their own file"
+
+# 14b3. --verify compares the live tree with the post-install hash snapshot.
+LIST2="$FAKE7/jci/gui/common/controls/List2/js/List2Ctrl.js"
+MARKER="$FAKE7/data/opencmu/example-marker.txt"
+run7 --apply --experimental --tweaks "00-example 32-shorter-delay" >/dev/null
+[ -f "$FAKE7/data/opencmu/state/installed.hashes" ] || fail "verify: no hash snapshot written"
+out=$(run7 --verify) || fail "verify: reported drift on a clean install"
+printf '%s\n' "$out" | grep -qF "intact: $LIST2" ||
+  fail "verify: patched file not reported intact"
+printf '%s\n' "$out" | grep -qF "intact: $MARKER" ||
+  fail "verify: created file not reported intact"
+printf 'x\n' >> "$LIST2"
+if run7 --verify >/dev/null 2>&1; then fail "verify: missed drift on a patched file"; fi
+run7 --verify 2>&1 | grep -qF "DRIFT: $LIST2" ||
+  fail "verify: no DRIFT line for a changed file"
+rm -f "$MARKER"
+run7 --verify 2>&1 | grep -qF "MISSING: $MARKER" ||
+  fail "verify: no MISSING line for a deleted file"
+run7 --apply --rollback >/dev/null
+[ -f "$FAKE7/data/opencmu/state/installed.hashes" ] &&
+  fail "verify: rollback kept the hash snapshot"
+if run7 --verify >/dev/null 2>&1; then
+  fail "verify: succeeded without a hash snapshot"
+fi
+rm -f "$FAKE7/data/opencmu/state/receipt.env" "$FAKE7/data/opencmu/state/receipt.json" \
+  "$FAKE7/data/opencmu/state/installed.hashes"
+: > "$FAKE7/data/opencmu/state/installed.list"
+pass "verify detects drift and missing files"
 
 # 14c. Re-applying must not duplicate the appended blocks.
 run7 --apply --experimental --tweaks "34-bigger-album-art 35-usb-audio-mod 41-list-loop 42-no-beeps 45-carplay-autoforeground" >/dev/null

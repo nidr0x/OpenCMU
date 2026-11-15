@@ -295,6 +295,21 @@ sh install.sh --usb /path/to/payload --root /mnt/cmu --apply --rollback
 
 Keep the original USB: rollback needs the same `tweaks/<id>/rollback.sh` files.
 
+### 6. Verify
+
+Every apply writes a SHA-256 snapshot (`/data/opencmu/state/installed.hashes`)
+of every file it patched or created. `--verify` recomputes those hashes and
+reports each file as intact, drifted, or missing — read-only, no flags needed:
+
+```sh
+sh install.sh --usb /path/to/payload --root / --verify
+```
+
+It exits 1 when anything drifted or went missing, so it can gate a script.
+Use it after a service visit or an OTA touch to see whether the unit still
+holds what the last install left behind. Rollback removes the snapshot along
+with the receipt, because afterwards there is nothing left to compare.
+
 ## Command-line reference
 
 | Flag | Meaning |
@@ -304,6 +319,7 @@ Keep the original USB: rollback needs the same `tweaks/<id>/rollback.sh` files.
 | `--apply` | Actually change files. Without it, the installer is a dry run. |
 | `--dry-run` | Print the plan only. This is the default. |
 | `--rollback` | Restore the last receipt's backup. Needs `--apply` to act. |
+| `--verify` | Compare the live tree against the last install's hash snapshot. Read-only; exits 1 on drift. |
 | `--tweaks "A B"` | Space-separated tweak ids. Defaults to `DEFAULT_TWEAKS`. |
 | `--list` | List available tweaks and exit. |
 | `--experimental` | Allow tweaks marked `TWEAK_EXPERIMENTAL=1`. |
