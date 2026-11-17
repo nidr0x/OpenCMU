@@ -50,3 +50,19 @@
 
 # Boot stages (who starts splashplayer, the collector, and the Aha waiters)
 /jci/scripts/stage_*.sh
+
+# Audio stack (verified present on fw74 stock NA; needed for 79-audio-research
+# and any later source-matrix work)
+/usr/bin/lastModeSvc.lua
+/usr/bin/audioMgr.lua
+/usr/bin/audioCtrl.lua
+/usr/bin/audioAmp.lua
+/usr/share/audio_management/*_JCI.lua
+/jci/am/ControlLogic.lua
+/jci/am/SourceMatrix.lua
+/jci/am/AmplifierConfig.lua
+/jci/am/ControlConfig.json
+/jci/am/start_audio.sh
+# Referenced by ControlConfig.json as the AM/FM external handler, but absent on
+# NA units (collector records it as MISSING; EU may have it)
+/usr/bin/audioCtrl_VBS.lua
