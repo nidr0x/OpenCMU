@@ -415,6 +415,7 @@ Bundled tweaks:
 | `76-enable-wifi-client` | high | no | Switches Wi-Fi to client mode at boot. Needs an SSID and passphrase and `60-startup-hook`. |
 | `77-boot-profiler` | low | no | Read-only runtime that logs when boot milestones are reached (HMI process, wlan0, hostapd, ready flag, CarPlay session). Needs `60-startup-hook`. |
 | `78-select-bt-audio-first` | medium | no | Switches to Bluetooth audio once per boot when a device connects. |
+| `79-audio-research` | low | no | Read-only runtime that watches the audio stack: lastModeSvc persistence file, audio ready flags, and a passive `dbus-monitor` on two broadcast signals. Needs `60-startup-hook`. |
 | `90-replacement-template` | high | no | Generic template for replacing a user-supplied file. Ships no patch. |
 | `91-touch-replacement` | high | no | Touch-lock template. Ships no patch. |
 
@@ -483,7 +484,7 @@ Tweak 59 also needs tweak 58 in the same run, or a shim already installed on the
 unit: it declares `/dev/input/aa-touchscreen` and will not do so without the
 device behind it.
 
-Tweaks 61, 62, 76 and 77 install a boot runtime instead of editing a file, so
+Tweaks 61, 62, 76, 77 and 79 install a boot runtime instead of editing a file, so
 they need `60-startup-hook` first: that tweak creates `/data/opencmu/boot.d`
 and starts its scripts at boot. They write nothing when the directory is
 missing, and the installer itself never spawns the runtime.
@@ -657,6 +658,7 @@ opencmu/
 │   ├── 76-enable-wifi-client/
 │   ├── 77-boot-profiler/
 │   ├── 78-select-bt-audio-first/
+│   ├── 79-audio-research/
 │   ├── 90-replacement-template/
 │   └── 91-touch-replacement/
 ├── manifest.env

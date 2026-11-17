@@ -18,7 +18,7 @@
 # an iptables-save capture, and 90/91 need their tweak.local.env. Documented
 # inputs get defaults (OPENCMU_AUDIO_ORDER, OPENCMU_OFFBOARD_SERVICE).
 #
-# 61/62/76/77 write into /data/opencmu/boot.d, so they are applied together
+# 61/62/76/77/79 write into /data/opencmu/boot.d, so they are applied together
 # with 60-startup-hook in the same run and rolled back as one.
 
 set -u
@@ -154,7 +154,7 @@ for d in "$USB"/tweaks/*/; do
 
   # boot.d tweaks need 60-startup-hook in the same run.
   case $id in
-    61-* | 62-* | 76-* | 77-*) plan="60-startup-hook $id" ;;
+    61-* | 62-* | 76-* | 77-* | 79-*) plan="60-startup-hook $id" ;;
     *) plan="$id" ;;
   esac
 

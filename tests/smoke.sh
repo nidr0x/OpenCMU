@@ -1107,7 +1107,7 @@ run13() {
   sh "$PAYLOAD/install.sh" --usb "$PAYLOAD" --root "$FAKE13" "$@"
 }
 
-PLAN13="38-order-audio-sources 47-disable-pandora 48-disable-stitcher 54-wifi-boot-off-busy-core 60-startup-hook 62-disable-touchscreen 63-no-blank-art 64-disable-jcicd 65-disable-dvd 66-disable-tv 67-disable-dab 68-disable-voice 69-disable-traffic 70-disable-diagnostics 71-disable-telematics 72-disable-nav 73-disable-jvmm 74-earlier-wifi-init 75-enable-ssh 76-enable-wifi-client 77-boot-profiler 78-select-bt-audio-first"
+PLAN13="38-order-audio-sources 47-disable-pandora 48-disable-stitcher 54-wifi-boot-off-busy-core 60-startup-hook 62-disable-touchscreen 63-no-blank-art 64-disable-jcicd 65-disable-dvd 66-disable-tv 67-disable-dab 68-disable-voice 69-disable-traffic 70-disable-diagnostics 71-disable-telematics 72-disable-nav 73-disable-jvmm 74-earlier-wifi-init 75-enable-ssh 76-enable-wifi-client 77-boot-profiler 78-select-bt-audio-first 79-audio-research"
 run13 --apply --experimental --tweaks "$PLAN13" >/dev/null
 
 SM13="$FAKE13/jci/sm/sm.conf"
@@ -1121,6 +1121,7 @@ WPA13="$FAKE13/data/opencmu/wifi/wpa_supplicant.conf"
 TOUCH13="$FAKE13/data/opencmu/boot.d/62-disable-touchscreen.sh"
 WIFI13="$FAKE13/data/opencmu/boot.d/76-wifi-client.sh"
 PROF13="$FAKE13/data/opencmu/boot.d/77-boot-profiler.sh"
+AUD13="$FAKE13/data/opencmu/boot.d/79-audio-research.sh"
 
 [ "$(grep -cF 'autorun="no"' "$SM13")" = "18" ] || fail "disable batch: wrong number of services switched off"
 grep -qF 'name="irs_server" autorun="yes"' "$SM13" || fail "47/48: shared IR server was disabled"
@@ -1247,6 +1248,33 @@ grep -qF 'another profiler run is active' "$PTMP/conc.log" ||
 wait "$profpid"
 rm -rf "$PTMP"
 pass "boot-profiler runtime behaves"
+
+# The audio runtime against a fake timeline: no D-Bus socket, no lastModeSvc,
+# but the audio_start flag and one ready flag appear mid-window, and the VBS
+# handler is present. Require the expected lines including the absent-path
+# snapshot for lastModeSvc.
+ATMP="$TMP/audioresearch"
+mkdir -p "$ATMP/ready"
+printf '100.0 0\n' > "$ATMP/uptime"
+printf 'x' > "$ATMP/start"
+printf 'x' > "$ATMP/ready/com.xse.service.AudioControl"
+printf 'x' > "$ATMP/vbs"
+OPENCMU_AUDIO_LOG="$ATMP/audio.log" OPENCMU_AUDIO_UPTIME="$ATMP/uptime" \
+OPENCMU_AUDIO_WINDOW=2 OPENCMU_AUDIO_STEADY=0 OPENCMU_AUDIO_LOCK="$ATMP/lock" \
+OPENCMU_AUDIO_SVC_BUS="$ATMP/nowhere" OPENCMU_AUDIO_READY_DIR="$ATMP/ready" \
+OPENCMU_AUDIO_START_FLAG="$ATMP/start" OPENCMU_AUDIO_VBS_HANDLER="$ATMP/vbs" \
+  sh "$AUD13"
+for _line in BOOT 'SKIP DBUS_MON' 'SKIP LASTMODE_SVC' 'EVENT AUDIO_START' \
+  'EVENT READY com.xse.service.AudioControl' STEADY 'SNAPSHOT AUDIO_START' \
+  'SNAPSHOT LASTMODE_ABSENT' 'SNAPSHOT VBS_HANDLER present'; do
+  grep -qF "$_line" "$ATMP/audio.log" || fail "audio-research: log missing '$_line'"
+done
+grep -qF 'EVENT READY com.xsembedded.service.AudioAmplifier' "$ATMP/audio.log" &&
+  fail "audio-research: logged a ready flag that does not exist"
+grep -qE 'interface=' "$ATMP/audio.log" &&
+  fail "audio-research: logged raw dbus-monitor output"
+rm -rf "$ATMP"
+pass "audio-research runtime behaves"
 
 [ "$(head -1 "$SSH13")" = '# [opencmu:enable-ssh] key-only SSH; prepended because the first value wins' ] ||
   fail "enable-ssh: block was not prepended"
