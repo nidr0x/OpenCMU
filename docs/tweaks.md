@@ -124,9 +124,9 @@ the environment and abort when it is absent:
 - `59-enable-aa-touch` takes no input, but refuses unless the shim is already on
   the unit at `/data_persist/oem-aa-mod/libpatch-blmjciaapa.so`.
 - `61-keep-cluster-compass`, `62-disable-touchscreen`,
-  `76-enable-wifi-client` and `77-boot-profiler` take no generated asset, but
-  refuse unless `/data/opencmu/boot.d` exists, which means
-  `60-startup-hook` already ran.
+  `76-enable-wifi-client`, `77-boot-profiler` and `79-audio-research` take no
+  generated asset, but refuse unless `/data/opencmu/boot.d` exists, which
+  means `60-startup-hook` already ran.
 - `75-enable-ssh` takes `OPENCMU_SSH_PUBKEY`, one RSA public key in OpenSSH
   format. It refuses ed25519 because the unit ships OpenSSH 5.9, and it does
   not change firewall rules.
@@ -147,11 +147,12 @@ the environment and abort when it is absent:
 
 A tweak that has to keep running belongs in `/data/opencmu/boot.d`, which
 `60-startup-hook` starts in the background at boot. `61-keep-cluster-compass`,
-`62-disable-touchscreen`, `76-enable-wifi-client` and `77-boot-profiler` are
+`62-disable-touchscreen`, `76-enable-wifi-client`, `77-boot-profiler` and
+`79-audio-research` are
 the examples: `apply.sh` installs one executable script there and starts
 nothing itself, so the installer still works against a mounted image. Each
 script owns its own lock and log; `62` has `--release`, `76` has `--stop`, and
-`77` is a one-shot that exits by itself.
+`77` and `79` are one-shots that exit by themselves.
 
 ## Rules
 

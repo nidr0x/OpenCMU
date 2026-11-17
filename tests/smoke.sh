@@ -6,6 +6,9 @@ set -eu
 
 ROOT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/opencmu-test.XXXXXX")
+# Canonicalize: a TMPDIR with a trailing slash yields a // path, and the
+# installer canonicalizes ROOT, so every later path comparison must match it.
+TMP=$(CDPATH='' cd -- "$TMP" && pwd)
 trap 'rm -rf "$TMP"' EXIT INT TERM
 
 FAKE="$TMP/root"
@@ -595,6 +598,34 @@ grep -qF 'text2 : msg.params.payload.title,' "$FAKE7/jci/gui/apps/usbaudio/js/us
   fail "single-tweak rollback: usbaudio payload not restored"
 pass "single-tweak rollbacks restore their own file"
 
+# 14b3. --verify compares the live tree with the post-install hash snapshot.
+LIST2="$FAKE7/jci/gui/common/controls/List2/js/List2Ctrl.js"
+MARKER="$FAKE7/data/opencmu/example-marker.txt"
+run7 --apply --experimental --tweaks "00-example 32-shorter-delay" >/dev/null
+[ -f "$FAKE7/data/opencmu/state/installed.hashes" ] || fail "verify: no hash snapshot written"
+out=$(run7 --verify) || fail "verify: reported drift on a clean install"
+printf '%s\n' "$out" | grep -qF "intact: $LIST2" ||
+  fail "verify: patched file not reported intact"
+printf '%s\n' "$out" | grep -qF "intact: $MARKER" ||
+  fail "verify: created file not reported intact"
+printf 'x\n' >> "$LIST2"
+if run7 --verify >/dev/null 2>&1; then fail "verify: missed drift on a patched file"; fi
+run7 --verify 2>&1 | grep -qF "DRIFT: $LIST2" ||
+  fail "verify: no DRIFT line for a changed file"
+rm -f "$MARKER"
+run7 --verify 2>&1 | grep -qF "MISSING: $MARKER" ||
+  fail "verify: no MISSING line for a deleted file"
+run7 --apply --rollback >/dev/null
+[ -f "$FAKE7/data/opencmu/state/installed.hashes" ] &&
+  fail "verify: rollback kept the hash snapshot"
+if run7 --verify >/dev/null 2>&1; then
+  fail "verify: succeeded without a hash snapshot"
+fi
+rm -f "$FAKE7/data/opencmu/state/receipt.env" "$FAKE7/data/opencmu/state/receipt.json" \
+  "$FAKE7/data/opencmu/state/installed.hashes"
+: > "$FAKE7/data/opencmu/state/installed.list"
+pass "verify detects drift and missing files"
+
 # 14c. Re-applying must not duplicate the appended blocks.
 run7 --apply --experimental --tweaks "34-bigger-album-art 35-usb-audio-mod 41-list-loop 42-no-beeps 45-carplay-autoforeground" >/dev/null
 rm -f "$FAKE7/data/opencmu/state/receipt.env" "$FAKE7/data/opencmu/state/receipt.json"
@@ -1076,7 +1107,7 @@ run13() {
   sh "$PAYLOAD/install.sh" --usb "$PAYLOAD" --root "$FAKE13" "$@"
 }
 
-PLAN13="38-order-audio-sources 47-disable-pandora 48-disable-stitcher 54-wifi-boot-off-busy-core 60-startup-hook 62-disable-touchscreen 63-no-blank-art 64-disable-jcicd 65-disable-dvd 66-disable-tv 67-disable-dab 68-disable-voice 69-disable-traffic 70-disable-diagnostics 71-disable-telematics 72-disable-nav 73-disable-jvmm 74-earlier-wifi-init 75-enable-ssh 76-enable-wifi-client 77-boot-profiler 78-select-bt-audio-first"
+PLAN13="38-order-audio-sources 47-disable-pandora 48-disable-stitcher 54-wifi-boot-off-busy-core 60-startup-hook 62-disable-touchscreen 63-no-blank-art 64-disable-jcicd 65-disable-dvd 66-disable-tv 67-disable-dab 68-disable-voice 69-disable-traffic 70-disable-diagnostics 71-disable-telematics 72-disable-nav 73-disable-jvmm 74-earlier-wifi-init 75-enable-ssh 76-enable-wifi-client 77-boot-profiler 78-select-bt-audio-first 79-audio-research"
 run13 --apply --experimental --tweaks "$PLAN13" >/dev/null
 
 SM13="$FAKE13/jci/sm/sm.conf"
@@ -1090,6 +1121,7 @@ WPA13="$FAKE13/data/opencmu/wifi/wpa_supplicant.conf"
 TOUCH13="$FAKE13/data/opencmu/boot.d/62-disable-touchscreen.sh"
 WIFI13="$FAKE13/data/opencmu/boot.d/76-wifi-client.sh"
 PROF13="$FAKE13/data/opencmu/boot.d/77-boot-profiler.sh"
+AUD13="$FAKE13/data/opencmu/boot.d/79-audio-research.sh"
 
 [ "$(grep -cF 'autorun="no"' "$SM13")" = "18" ] || fail "disable batch: wrong number of services switched off"
 grep -qF 'name="irs_server" autorun="yes"' "$SM13" || fail "47/48: shared IR server was disabled"
@@ -1216,6 +1248,33 @@ grep -qF 'another profiler run is active' "$PTMP/conc.log" ||
 wait "$profpid"
 rm -rf "$PTMP"
 pass "boot-profiler runtime behaves"
+
+# The audio runtime against a fake timeline: no D-Bus socket, no lastModeSvc,
+# but the audio_start flag and one ready flag appear mid-window, and the VBS
+# handler is present. Require the expected lines including the absent-path
+# snapshot for lastModeSvc.
+ATMP="$TMP/audioresearch"
+mkdir -p "$ATMP/ready"
+printf '100.0 0\n' > "$ATMP/uptime"
+printf 'x' > "$ATMP/start"
+printf 'x' > "$ATMP/ready/com.xse.service.AudioControl"
+printf 'x' > "$ATMP/vbs"
+OPENCMU_AUDIO_LOG="$ATMP/audio.log" OPENCMU_AUDIO_UPTIME="$ATMP/uptime" \
+OPENCMU_AUDIO_WINDOW=2 OPENCMU_AUDIO_STEADY=0 OPENCMU_AUDIO_LOCK="$ATMP/lock" \
+OPENCMU_AUDIO_SVC_BUS="$ATMP/nowhere" OPENCMU_AUDIO_READY_DIR="$ATMP/ready" \
+OPENCMU_AUDIO_START_FLAG="$ATMP/start" OPENCMU_AUDIO_VBS_HANDLER="$ATMP/vbs" \
+  sh "$AUD13"
+for _line in BOOT 'SKIP DBUS_MON' 'SKIP LASTMODE_SVC' 'EVENT AUDIO_START' \
+  'EVENT READY com.xse.service.AudioControl' STEADY 'SNAPSHOT AUDIO_START' \
+  'SNAPSHOT LASTMODE_ABSENT' 'SNAPSHOT VBS_HANDLER present'; do
+  grep -qF "$_line" "$ATMP/audio.log" || fail "audio-research: log missing '$_line'"
+done
+grep -qF 'EVENT READY com.xsembedded.service.AudioAmplifier' "$ATMP/audio.log" &&
+  fail "audio-research: logged a ready flag that does not exist"
+grep -qE 'interface=' "$ATMP/audio.log" &&
+  fail "audio-research: logged raw dbus-monitor output"
+rm -rf "$ATMP"
+pass "audio-research runtime behaves"
 
 [ "$(head -1 "$SSH13")" = '# [opencmu:enable-ssh] key-only SSH; prepended because the first value wins' ] ||
   fail "enable-ssh: block was not prepended"

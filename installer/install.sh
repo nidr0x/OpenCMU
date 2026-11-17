@@ -9,11 +9,13 @@ SELF_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 . "$SELF_DIR/lib/manifest.sh"
 . "$SELF_DIR/lib/patch.sh"
 . "$SELF_DIR/lib/tweaks.sh"
+. "$SELF_DIR/lib/verify.sh"
 
 USB_DIR=""
 ROOT="/"
 DRY_RUN=1
 ROLLBACK=0
+VERIFY=0
 FORCE=0
 EXPERIMENTAL=0
 TWEAKS=""
@@ -28,6 +30,8 @@ usage: install.sh [options]
   --apply             actually change files (default is dry-run)
   --dry-run           print the plan only (default)
   --rollback          restore the last receipt's backup (needs --apply)
+  --verify            compare every file the last install touched with its
+                      backup (read-only; exit 1 on drift or missing files)
   --tweaks "A B"      tweak ids to apply (default: manifest DEFAULT_TWEAKS)
   --list              list available tweaks and exit
   --experimental      allow tweaks marked TWEAK_EXPERIMENTAL=1
@@ -47,6 +51,7 @@ while [ $# -gt 0 ]; do
     --apply)        DRY_RUN=0; shift ;;
     --dry-run)      DRY_RUN=1; shift ;;
     --rollback)     ROLLBACK=1; shift ;;
+    --verify)       VERIFY=1; shift ;;
     --tweaks)       need_value "$@"; TWEAKS=$2; shift 2 ;;
     --list)         LIST=1; shift ;;
     --experimental) EXPERIMENTAL=1; shift ;;
@@ -148,7 +153,8 @@ do_rollback() {
     rollback_tweak "$id"
   done
 
-  rm -f "$OPENCMU_STATE/installed.list" "$OPENCMU_STATE/receipt.env" "$OPENCMU_STATE/receipt.json"
+  rm -f "$OPENCMU_STATE/installed.list" "$OPENCMU_STATE/receipt.env" \
+        "$OPENCMU_STATE/receipt.json" "$OPENCMU_STATE/installed.hashes"
   log "rollback complete; backups kept in $OPENCMU_BACKUP"
 }
 
@@ -158,6 +164,11 @@ main() {
 
   if [ "$LIST" -eq 1 ]; then
     list_tweaks
+    return 0
+  fi
+
+  if [ "$VERIFY" -eq 1 ]; then
+    do_verify || return 1
     return 0
   fi
 
@@ -197,6 +208,7 @@ main() {
     apply_tweak "$id"
   done
 
+  write_installed_hashes
   write_receipt "$plan"
   log "install complete"
   log "receipt: $OPENCMU_STATE/receipt.env"

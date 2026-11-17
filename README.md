@@ -237,6 +237,22 @@ example tweak, checks the receipt and backup, rolls it back, and exercises the
 firmware guard, the experimental gate, partial-failure recovery, and the
 builders.
 
+Two opt-in checks run against a stock rootfs — a pristine, unpacked copy of
+the 74.00.324 firmware tree on your disk, no `.up` file needed at test time:
+
+```sh
+OPENCMU_STOCK_ROOT=/path/to/rootfs make check-anchors
+OPENCMU_STOCK_ROOT=/path/to/rootfs sh tests/stock-sweep.sh
+```
+
+`check-anchors` statically parses every patch call in `tweaks/*/apply.sh` and
+counts the literals each helper will require, simulating the calls in order,
+so an anchor that depends on an earlier patch in the same apply still checks.
+`stock-sweep` applies each tweak for real against the copy, rolls it back, and
+verifies the rollback byte-for-byte plus a whole-tree manifest at the end.
+Tweaks whose external inputs are missing (the AGPL Android Auto shim, SSH
+keys, an iptables capture) are skipped, not failed.
+
 Verify the USB payload before copying it:
 
 ```sh
@@ -295,6 +311,21 @@ sh install.sh --usb /path/to/payload --root /mnt/cmu --apply --rollback
 
 Keep the original USB: rollback needs the same `tweaks/<id>/rollback.sh` files.
 
+### 6. Verify
+
+Every apply writes a SHA-256 snapshot (`/data/opencmu/state/installed.hashes`)
+of every file it patched or created. `--verify` recomputes those hashes and
+reports each file as intact, drifted, or missing — read-only, no flags needed:
+
+```sh
+sh install.sh --usb /path/to/payload --root / --verify
+```
+
+It exits 1 when anything drifted or went missing, so it can gate a script.
+Use it after a service visit or an OTA touch to see whether the unit still
+holds what the last install left behind. Rollback removes the snapshot along
+with the receipt, because afterwards there is nothing left to compare.
+
 ## Command-line reference
 
 | Flag | Meaning |
@@ -304,6 +335,7 @@ Keep the original USB: rollback needs the same `tweaks/<id>/rollback.sh` files.
 | `--apply` | Actually change files. Without it, the installer is a dry run. |
 | `--dry-run` | Print the plan only. This is the default. |
 | `--rollback` | Restore the last receipt's backup. Needs `--apply` to act. |
+| `--verify` | Compare the live tree against the last install's hash snapshot. Read-only; exits 1 on drift. |
 | `--tweaks "A B"` | Space-separated tweak ids. Defaults to `DEFAULT_TWEAKS`. |
 | `--list` | List available tweaks and exit. |
 | `--experimental` | Allow tweaks marked `TWEAK_EXPERIMENTAL=1`. |
@@ -383,6 +415,7 @@ Bundled tweaks:
 | `76-enable-wifi-client` | high | no | Switches Wi-Fi to client mode at boot. Needs an SSID and passphrase and `60-startup-hook`. |
 | `77-boot-profiler` | low | no | Read-only runtime that logs when boot milestones are reached (HMI process, wlan0, hostapd, ready flag, CarPlay session). Needs `60-startup-hook`. |
 | `78-select-bt-audio-first` | medium | no | Switches to Bluetooth audio once per boot when a device connects. |
+| `79-audio-research` | low | no | Read-only runtime that watches the audio stack: lastModeSvc persistence file, audio ready flags, and a passive `dbus-monitor` on two broadcast signals. Needs `60-startup-hook`. |
 | `90-replacement-template` | high | no | Generic template for replacing a user-supplied file. Ships no patch. |
 | `91-touch-replacement` | high | no | Touch-lock template. Ships no patch. |
 
@@ -451,7 +484,7 @@ Tweak 59 also needs tweak 58 in the same run, or a shim already installed on the
 unit: it declares `/dev/input/aa-touchscreen` and will not do so without the
 device behind it.
 
-Tweaks 61, 62, 76 and 77 install a boot runtime instead of editing a file, so
+Tweaks 61, 62, 76, 77 and 79 install a boot runtime instead of editing a file, so
 they need `60-startup-hook` first: that tweak creates `/data/opencmu/boot.d`
 and starts its scripts at boot. They write nothing when the directory is
 missing, and the installer itself never spawns the runtime.
@@ -555,12 +588,15 @@ opencmu/
 ├── builder/
 │   ├── build-usb.sh        assemble dist/opencmu-usb
 │   ├── verify-usb.sh       check hashes and file list
+│   ├── check-anchors.py    static lint of every patch anchor against a stock rootfs
 │   ├── make-up.py          experimental .up builder
 │   ├── build-collect.sh    read-only stock collector payload
 │   ├── collect.sh          runs on the unit; copies the whitelist
 │   └── collect.files       whitelist of stock paths
 ├── docs/
 │   ├── architecture.md
+│   ├── boot-profiling.md
+│   ├── collect.md
 │   ├── package-format.md
 │   ├── recovery.md
 │   ├── safety.md
@@ -570,7 +606,8 @@ opencmu/
 │   ├── install.sh          main installer
 │   └── lib/                common, manifest, patch, tweaks
 ├── tests/
-│   └── smoke.sh            fake-root integration tests
+│   ├── smoke.sh            fake-root integration tests
+│   └── stock-sweep.sh      opt-in apply/rollback sweep against a stock rootfs
 ├── tweaks/
 │   ├── 00-example/
 │   ├── 30-no-disclaimer/
@@ -621,6 +658,7 @@ opencmu/
 │   ├── 76-enable-wifi-client/
 │   ├── 77-boot-profiler/
 │   ├── 78-select-bt-audio-first/
+│   ├── 79-audio-research/
 │   ├── 90-replacement-template/
 │   └── 91-touch-replacement/
 ├── manifest.env

@@ -44,6 +44,17 @@ patch of their own.
 
 If a proposed tweak needs any of the first two, it does not belong here.
 
+## Audio service and `smdb-read`
+
+- Never call or signal `smdb-read` from a script. If an `smdb-read` invocation
+  is killed or exits mid-read, it keeps holding the service-manager lock and
+  the unit reboots. This was reported on EU units (MiatOff) and is not
+  verified here; treat it as a hard hazard either way.
+- If you need live audio state, read without taking a lock: run `dbus-monitor`
+  as a passive listener on broadcast signals (for example `com.jci.vbs.vdt`
+  and `com.jci.vbs.bcm`) instead of calling getters over
+  `/tmp/dbus_service_socket`.
+
 ## First run on a bench unit
 
 1. Run the installer without `--apply` and read the plan.
